@@ -170,6 +170,8 @@ def main():
                 else:
                     sock.send(f"PRIVMSG #{config.channel} : Sorry {username}, you dont have enough rights to create a clip \n".encode('utf-8'))
 
+            if "!getclip" in message:
+                sock.send(f"PRIVMSG #{config.channel} : Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
 
 if __name__ == "__main__":
     # log exceptions
