@@ -1,0 +1,4 @@
+- add last file functionality to generate_clips
+- fix oath flow
+- make !clip message configurable
+- make script start files for all os'ss
