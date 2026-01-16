@@ -1,0 +1,6 @@
+/config
+/src/__pycache__
+*.txt
+*.mp4
+/clip timestamps
+/clips
