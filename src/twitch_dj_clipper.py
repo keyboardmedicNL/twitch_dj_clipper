@@ -115,7 +115,7 @@ def get_auth_workaround():
     logging.info("https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot&state=c3ab8aa609ea11e793ae92361f002671")
     raise RuntimeError("restart the script once you have updated your oath_token in config.yaml")
 
-def validate_token(token_to_validate:str = token, is_user_token: bool = False):
+def validate_token(token_to_validate:str = token, is_user_oath: bool = False):
 
     validate_token_response = requests.get("https://id.twitch.tv/oauth2/validate", headers= {'Authorization':f"Bearer {token_to_validate}"})
 
@@ -124,7 +124,7 @@ def validate_token(token_to_validate:str = token, is_user_token: bool = False):
 
     elif validate_token_response.status_code == 401:
 
-        if not is_user_token:
+        if not is_user_oath:
             logging.debug("validated twitch api token and came back as invalid")
 
             global token
