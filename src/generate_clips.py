@@ -13,6 +13,7 @@ import glob
 import re
 
 output_path = "clips"
+clips_timestamp_files_path = os.path.join("clip timestamps","*")
 
 def create_clips(input_file: str, output_file_type: str, list_of_clip_timestamps: list, clip_date:str):
     for i, clip_stamp in enumerate(list_of_clip_timestamps):
@@ -21,10 +22,13 @@ def create_clips(input_file: str, output_file_type: str, list_of_clip_timestamps
         sanitized_name = sanitize_filename(file_title)
         output_file = os.path.join(f"{output_path}",f"{sanitized_name}.{output_file_type}")
 
+        clip_start_time = timestamp_to_time_str(int(clip_stamp) - int(config.clip_start_before_timestamp))
+        clip_duration = timestamp_to_time_str(config.total_clip_duration)
+
         command = (
             f'ffmpeg -i {{}} '
-            f'-ss {config.clip_start_before_timestamp} '
-            f'-t {config.total_clip_duration} '
+            f'-ss {clip_start_time} '
+            f'-t {clip_duration} '
             f'-metadata artist="{config.metadata_artist}" '
             f'-metadata title="{file_title}" '
             f'-c copy {{}}'
@@ -79,6 +83,16 @@ def y_or_n(user_input: str) -> bool:
 def build_path(file_path: str, file_name: str) -> str:
     return(os.path.join(file_path, file_name))
 
+def timestamp_to_time_str(time_stamp) -> str:
+    hours, remainder = divmod(time_stamp, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    return(time_str)
+
+def get_last_file_in_folder(folder_path: str) -> str:
+    return(max(glob.glob(folder_path), key=os.path.getctime))
+
 def main():
     logging.info("starting twitch dj clipper")
 
@@ -88,48 +102,65 @@ def main():
     use_vod_parent = False
     use_clips_parent = False
 
-    while keep_going:
+    use_last_files = input(f"do you want to use the last created clips file and last created vod (Y) or n\n")
+    use_last_files = y_or_n(use_last_files)
 
-        # gets clips timestamp file from user input
-        if clips_file_parent:
-            use_clips_parent = input(f"do you want to use the previous parent path of {clips_file_parent} for your clips file (Y) or n\n")
-            use_clips_parent = y_or_n(use_clips_parent)
+    if use_last_files:
+        clips_file = get_last_file_in_folder(clips_timestamp_files_path)
+        print(f"clip timestamp file to use = {clips_file}")
 
-        if use_clips_parent:
-            clips_file = input(f"please provide name of clips timestamp file you want to use in {clips_file_parent}\n")
-            clips_file = build_path(clips_file_parent, clips_file)
-        else:
-            clips_file = input("please provide path to the clips timestamp file you want to use\n")
-
-        clips_file = wrap_string(clips_file)
-        clips_file_parent = get_parent_folder(clips_file)
-
-        # get clip timestamps from file
         list_of_clip_timestamps, clips_date = get_clip_timestamps(clips_file)
 
-
-        # gets vod file from user input
-        if vod_file_parent:
-            use_vod_parent = input(f"do you want to use the previous parent path of {vod_file_parent} for your vod (Y) or n\n")
-            use_vod_parent = y_or_n(use_vod_parent)
-        
-        if use_vod_parent:
-            input_file = input(f"please provide name of the vod you want to use in {vod_file_parent}\n")
-            input_file = build_path(vod_file_parent, input_file)
-        else:
-            input_file = input("please provide path to the vod you want to use\n")
-
+        input_file = get_last_file_in_folder(os.path.join(config.vod_folder_path,"*"))
         input_file = wrap_string(input_file)
+        print(f"vod to use = {input_file} ")
 
-        vod_file_parent = get_parent_folder(input_file)
-
-        # creates clips
         create_clips(input_file, config.output_file_type, list_of_clip_timestamps, clips_date)
 
-        # continues or exits based on user input
-        keep_going = input("do you want to create more clips with different files? (Y) or N\n")
-        keep_going = y_or_n(keep_going)
+
+    else:
+        while keep_going:
+
+            # gets clips timestamp file from user input
+            if clips_file_parent:
+                use_clips_parent = input(f"do you want to use the previous parent path of {clips_file_parent} for your clips file (Y) or n\n")
+                use_clips_parent = y_or_n(use_clips_parent)
+
+            if use_clips_parent:
+                clips_file = input(f"please provide name of clips timestamp file you want to use in {clips_file_parent}\n")
+                clips_file = build_path(clips_file_parent, clips_file)
+            else:
+                clips_file = input("please provide path to the clips timestamp file you want to use\n")
+
+            #clips_file = wrap_string(clips_file)
+            clips_file_parent = get_parent_folder(clips_file)
+
+            # get clip timestamps from file
+            list_of_clip_timestamps, clips_date = get_clip_timestamps(clips_file)
+
+
+            # gets vod file from user input
+            if vod_file_parent:
+                use_vod_parent = input(f"do you want to use the previous parent path of {vod_file_parent} for your vod (Y) or n\n")
+                use_vod_parent = y_or_n(use_vod_parent)
             
+            if use_vod_parent:
+                input_file = input(f"please provide name of the vod you want to use in {vod_file_parent}\n")
+                input_file = build_path(vod_file_parent, input_file)
+            else:
+                input_file = input("please provide path to the vod you want to use\n")
+
+            input_file = wrap_string(input_file)
+
+            vod_file_parent = get_parent_folder(input_file)
+
+            # creates clips
+            create_clips(input_file, config.output_file_type, list_of_clip_timestamps, clips_date)
+
+            # continues or exits based on user input
+            keep_going = input("do you want to create more clips with different files? (Y) or N\n")
+            keep_going = y_or_n(keep_going)
+                
 if __name__ == "__main__":
 
     # log exceptions

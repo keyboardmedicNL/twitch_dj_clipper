@@ -21,8 +21,6 @@ import config_loader
 sock = socket.socket()
 server = 'irc.chat.twitch.tv'
 port = 6667
-current_date = datetime.datetime.today().strftime('%Y-%m-%d')
-clips_file = os.path.join("clip timestamps",f"clips-{current_date}.txt")
 
 class ServerThread(threading.Thread):
 
@@ -71,25 +69,24 @@ def clip(broadcaster_id: int, token: str):
         logging.debug(f"{config.channel} is not live")
     
     if is_live:
-
         started_time = get_stream_json["data"][0]["started_at"]
         started_time = datetime.datetime.fromisoformat(started_time)
         started_timestamp = int(started_time.timestamp())
+        started_date = f"{started_time.year}-{started_time.month:02d}-{started_time.day:02d}"
+
         current_time = datetime.datetime.now()
         current_timestamp = int(current_time.timestamp())
-
         elapsed_timestamp = current_timestamp - started_timestamp
+        elapsed_time_formatted = timestamp_to_time_str(elapsed_timestamp)
 
-        hours, remainder = divmod(elapsed_timestamp, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        elapsed_time_formatted = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-        
+        clips_file = os.path.join("clip timestamps",f"clips-{started_date}.txt")
+
         if not exists(clips_file):
             with open(clips_file, 'w') as File:
                 File.write("")
 
         with open(clips_file, 'a') as File:
-            File.write(f"{elapsed_time_formatted}\n")
+            File.write(f"{elapsed_timestamp}\n")
 
         sock.send(f"PRIVMSG #{config.channel} : saved timestap for clip {elapsed_time_formatted} \n".encode('utf-8'))
         logging.debug(f"saved timestap for clip {elapsed_time_formatted}")
@@ -97,6 +94,13 @@ def clip(broadcaster_id: int, token: str):
 
         sock.send(f"PRIVMSG #{config.channel} : {config.channel} is not live \n".encode('utf-8'))
         logging.debug(f"{config.channel} is not live")
+
+def timestamp_to_time_str(time_stamp) -> str:
+    hours, remainder = divmod(time_stamp, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    return(time_str)
 
 def get_token():
         
