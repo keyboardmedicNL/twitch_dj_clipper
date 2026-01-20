@@ -23,6 +23,8 @@ import select
 sock = socket.socket()
 server = 'irc.chat.twitch.tv'
 port = 6667
+oath_url = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot&state=c3ab8aa609ea11e793ae92361f002671"
+token = ""
 
 class ServerThread(threading.Thread):
 
@@ -65,17 +67,18 @@ def timestamp_to_time_str(time_stamp) -> str:
     return(time_str)
 
 def get_token():
-        
-        print("Requesting new api auth token from twitch")
-        response=requests.post("https://id.twitch.tv/oauth2/token", json={"client_id" : str(config.twitch_api_id), "client_secret" : str(config.twitch_api_secret), "grant_type":"client_credentials"})
-        if "200" in str(response):
-            token_json = response.json()
-            token = token_json["access_token"]
-        else:
-            print(f"unable to request new twitch api auth token with response: {response}")
-            token = "empty"
-        return(token)
+        logging.debug("Requesting new api auth token from twitch")
 
+        response=requests.post("https://id.twitch.tv/oauth2/token", json={"client_id" : str(config.twitch_api_id), "client_secret" : str(config.twitch_api_secret), "grant_type":"client_credentials"})
+        
+        if response.ok:
+            token_json = response.json()
+            global token
+            token = token_json["access_token"]
+        
+        else:
+            raise RuntimeError(f"unable to request new twitch api auth token with response: {response}")
+        
 def check_mod_or_broadcaster(message_headers: str) -> bool:
     if "mod=1" in message_headers or "broadcaster/1" in message_headers:
         return(True)
@@ -90,7 +93,7 @@ def get_username(resp: str):
     logging.debug(f"username seperated from message: {username}\n")
     return(username)
 
-def get_ids(token: str) -> tuple[int,int]:
+def get_ids() -> tuple[int,int]:
     # gets user id for broadcaster and bot
     getbroadcaster_response = requests.get(f"https://api.twitch.tv/helix/users?login={config.channel}", headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
     getbroadcaster_responsejson = getbroadcaster_response.json()
@@ -107,13 +110,51 @@ def connect_to_irc():
     sock.send(f"JOIN #{config.channel}\n".encode('utf-8'))
     sock.send(f"CAP REQ :twitch.tv/tags twitch.tv/commands\n".encode('utf-8'))
 
+def get_auth_workaround():
+    logging.info("please open the following link in a browser and authorize, once done copy the acces_token value from your url in the browser to the config.yaml:")
+    logging.info("https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot&state=c3ab8aa609ea11e793ae92361f002671")
+    raise RuntimeError("restart the script once you have updated your oath_token in config.yaml")
+
+def validate_token(token_to_validate:str = token, is_user_token: bool = False):
+
+    validate_token_response = requests.get("https://id.twitch.tv/oauth2/validate", headers= {'Authorization':f"Bearer {token_to_validate}"})
+
+    if validate_token_response.ok:
+        logging.debug("validated twitch api token and came back as valid")
+
+    elif validate_token_response.status_code == 401:
+
+        if not is_user_token:
+            logging.debug("validated twitch api token and came back as invalid")
+
+            global token
+            get_token()
+
+        else:
+            get_auth_workaround()
+            
 # twitch commands logic
-def clip(broadcaster_id: int, token: str, message_headers: str, username: str):
+def clip(broadcaster_id: int, message_headers: str, username: str):
+
     is_live = False
 
     if check_mod_or_broadcaster(message_headers):
 
-        get_stream_response = requests.get(f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}", headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
+        api_call_succes = False
+        error_count = 0
+
+        while not api_call_succes:
+            get_stream_response = requests.get(url=f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}",headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
+            
+            if get_stream_response.ok:
+                api_call_succes = True
+            else:
+                error_count = error_count + 1
+                validate_token(token)
+            
+            if error_count >= 5:
+                raise RuntimeError("tried 5 times to complete twitch api request and failed")
+
         get_stream_json = get_stream_response.json()
 
         try: 
@@ -158,12 +199,19 @@ def stick(username: str):
 
 # main 
 def main():
-    # gets token from twitch
-    token = get_token()
+    global config
+    config = config_loader.load_config()
 
-    broadcaster_id, bot_id = get_ids(token)
+    global token
+    get_token()
+
+    validate_token(config.oath_token,True)
+
+    broadcaster_id, bot_id = get_ids()
 
     connect_to_irc()
+
+    error_count = 0
 
     # main loop reading message
     while True:
@@ -172,10 +220,16 @@ def main():
             ready_to_read, ready_to_write, in_error = \
             select.select([sock,], [sock,], [], 5)
         except select.error:
-            sock.shutdown(2)    # 0 = done receiving, 1 = done sending, 2 = both
-            sock.close()
-            logging.error(f"irc connection failed, attempting reconnect")
-            connect_to_irc()
+            error_count = error_count + 1
+
+            if error_count <= 3:
+                sock.shutdown(2)    # 0 = done receiving, 1 = done sending, 2 = both
+                sock.close()
+
+                logging.error(f"irc connection failed, attempting reconnect")
+                connect_to_irc()
+            else:
+                raise RuntimeError("unable to connect to twitch chat after trying 3 times")
 
         # gets messages in chat
         resp = sock.recv(2048).decode('utf-8')
@@ -192,7 +246,7 @@ def main():
 
             if "!clip" in message:
                 logging.debug(f"triggered clip for {username}")
-                clip(broadcaster_id, token, message_headers, username)
+                clip(broadcaster_id, message_headers, username)
 
             if "!getclip" in message:
                 get_clip(username)
@@ -204,5 +258,4 @@ if __name__ == "__main__":
     # log exceptions
     sys.excepthook = housey_logging.log_exception
 
-    config = config_loader.load_config()
     main()
