@@ -16,6 +16,7 @@ import sys
 import os
 from os.path import exists
 import config_loader
+import random
 
 #variables
 sock = socket.socket()
@@ -54,46 +55,6 @@ def start_server():
 def stop_server():
     global server
     server.shutdown()
-
-def clip(broadcaster_id: int, token: str):
-
-    get_stream_response = requests.get(f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}", headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
-    get_stream_json = get_stream_response.json()
-
-    try: 
-        if str(get_stream_json["data"][0]["type"]).lower() == "live":
-            is_live = True
-    
-    except:
-        sock.send(f"PRIVMSG #{config.channel} : {config.channel} is not live \n".encode('utf-8'))
-        logging.debug(f"{config.channel} is not live")
-    
-    if is_live:
-        started_time = get_stream_json["data"][0]["started_at"]
-        started_time = datetime.datetime.fromisoformat(started_time)
-        started_timestamp = int(started_time.timestamp())
-        started_date = f"{started_time.year}-{started_time.month:02d}-{started_time.day:02d}"
-
-        current_time = datetime.datetime.now()
-        current_timestamp = int(current_time.timestamp())
-        elapsed_timestamp = current_timestamp - started_timestamp
-        elapsed_time_formatted = timestamp_to_time_str(elapsed_timestamp)
-
-        clips_file = os.path.join("clip timestamps",f"clips-{started_date}.txt")
-
-        if not exists(clips_file):
-            with open(clips_file, 'w') as File:
-                File.write("")
-
-        with open(clips_file, 'a') as File:
-            File.write(f"{elapsed_timestamp}\n")
-
-        sock.send(f"PRIVMSG #{config.channel} : saved timestap for clip {elapsed_time_formatted} \n".encode('utf-8'))
-        logging.debug(f"saved timestap for clip {elapsed_time_formatted}")
-    else:
-
-        sock.send(f"PRIVMSG #{config.channel} : {config.channel} is not live \n".encode('utf-8'))
-        logging.debug(f"{config.channel} is not live")
 
 def timestamp_to_time_str(time_stamp) -> str:
     hours, remainder = divmod(time_stamp, 3600)
@@ -138,6 +99,58 @@ def get_ids(token: str) -> tuple[int,int]:
     bot_id = getbot_responsejson["data"][0]["id"]
     return(broadcaster_id,bot_id)
 
+# twitch commands logic
+def clip(broadcaster_id: int, token: str, message_headers: str):
+
+    if check_mod_or_broadcaster(message_headers):
+
+        get_stream_response = requests.get(f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}", headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
+        get_stream_json = get_stream_response.json()
+
+        try: 
+            if str(get_stream_json["data"][0]["type"]).lower() == "live":
+                is_live = True
+        
+        except:
+            sock.send(f"PRIVMSG #{config.channel} : {config.channel} is not live \n".encode('utf-8'))
+            logging.debug(f"{config.channel} is not live")
+        
+        if is_live:
+            started_time = get_stream_json["data"][0]["started_at"]
+            started_time = datetime.datetime.fromisoformat(started_time)
+            started_timestamp = int(started_time.timestamp())
+            started_date = f"{started_time.year}-{started_time.month:02d}-{started_time.day:02d}"
+
+            current_time = datetime.datetime.now()
+            current_timestamp = int(current_time.timestamp())
+            elapsed_timestamp = current_timestamp - started_timestamp
+            elapsed_time_formatted = timestamp_to_time_str(elapsed_timestamp)
+
+            clips_file = os.path.join("clip timestamps",f"clips-{started_date}.txt")
+
+            if not exists(clips_file):
+                with open(clips_file, 'w') as File:
+                    File.write("")
+
+            with open(clips_file, 'a') as File:
+                File.write(f"{elapsed_timestamp}\n")
+
+            sock.send(f"PRIVMSG #{config.channel} : saved timestap for clip {elapsed_time_formatted} \n".encode('utf-8'))
+            logging.debug(f"saved timestap for clip {elapsed_time_formatted}")
+        else:
+
+            sock.send(f"PRIVMSG #{config.channel} : {config.channel} is not live \n".encode('utf-8'))
+            logging.debug(f"{config.channel} is not live")
+    
+    else:
+        sock.send(f"PRIVMSG #{config.channel} : Sorry {username}, you dont have enough rights to create a clip \n".encode('utf-8'))
+
+def get_clip():
+    sock.send(f"PRIVMSG #{config.channel} : Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
+
+def stick(username: str):
+    sock.send(f"PRIVMSG #{config.channel} : {username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
+
 # main 
 def main():
     # gets token from twitch
@@ -168,14 +181,13 @@ def main():
 
             if "!clip" in message:
                 logging.debug(f"triggered clip for {username}")
-
-                if check_mod_or_broadcaster(message_headers):
-                    clip(broadcaster_id, token)
-                else:
-                    sock.send(f"PRIVMSG #{config.channel} : Sorry {username}, you dont have enough rights to create a clip \n".encode('utf-8'))
+                clip(broadcaster_id, token, message_headers)
 
             if "!getclip" in message:
-                sock.send(f"PRIVMSG #{config.channel} : Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
+                get_clip()
+
+            if "!stick" in message:
+                stick(username)
 
 if __name__ == "__main__":
     # log exceptions
