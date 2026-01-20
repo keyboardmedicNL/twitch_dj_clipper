@@ -237,7 +237,7 @@ def main():
 
         # returns pong when twitch sends a ping to keep connection alive
         if resp.startswith('PING'):
-            print(f"Ping message from twitch: {resp}")
+            logging.debug(f"Ping message from twitch: {resp}")
             sock.send("PONG\n".encode('utf-8'))
 
         elif len(resp) > 0 and "PRIVMSG" in resp:

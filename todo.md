@@ -1,3 +1,2 @@
 - fix oath flow
-- add reconnect logic if chat discconects
 - make script start files for all os
