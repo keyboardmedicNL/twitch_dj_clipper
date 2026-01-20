@@ -17,6 +17,7 @@ import os
 from os.path import exists
 import config_loader
 import random
+import select
 
 #variables
 sock = socket.socket()
@@ -99,8 +100,16 @@ def get_ids(token: str) -> tuple[int,int]:
     bot_id = getbot_responsejson["data"][0]["id"]
     return(broadcaster_id,bot_id)
 
+def connect_to_irc():
+    sock.connect((server, port))
+    sock.send(f"PASS oauth:{config.oath_token}\n".encode('utf-8'))
+    sock.send(f"NICK {config.bot_name}\n".encode('utf-8'))
+    sock.send(f"JOIN #{config.channel}\n".encode('utf-8'))
+    sock.send(f"CAP REQ :twitch.tv/tags twitch.tv/commands\n".encode('utf-8'))
+
 # twitch commands logic
-def clip(broadcaster_id: int, token: str, message_headers: str):
+def clip(broadcaster_id: int, token: str, message_headers: str, username: str):
+    is_live = False
 
     if check_mod_or_broadcaster(message_headers):
 
@@ -112,7 +121,7 @@ def clip(broadcaster_id: int, token: str, message_headers: str):
                 is_live = True
         
         except:
-            sock.send(f"PRIVMSG #{config.channel} : {config.channel} is not live \n".encode('utf-8'))
+            sock.send(f"PRIVMSG #{config.channel} : @{username} {config.channel} is not live \n".encode('utf-8'))
             logging.debug(f"{config.channel} is not live")
         
         if is_live:
@@ -135,21 +144,17 @@ def clip(broadcaster_id: int, token: str, message_headers: str):
             with open(clips_file, 'a') as File:
                 File.write(f"{elapsed_timestamp}\n")
 
-            sock.send(f"PRIVMSG #{config.channel} : saved timestap for clip {elapsed_time_formatted} \n".encode('utf-8'))
+            sock.send(f"PRIVMSG #{config.channel} :MrDestructoid saved timestap for clip {elapsed_time_formatted} MrDestructoid\n".encode('utf-8'))
             logging.debug(f"saved timestap for clip {elapsed_time_formatted}")
-        else:
-
-            sock.send(f"PRIVMSG #{config.channel} : {config.channel} is not live \n".encode('utf-8'))
-            logging.debug(f"{config.channel} is not live")
     
     else:
-        sock.send(f"PRIVMSG #{config.channel} : Sorry {username}, you dont have enough rights to create a clip \n".encode('utf-8'))
+        sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
 
-def get_clip():
-    sock.send(f"PRIVMSG #{config.channel} : Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
+def get_clip(username: str):
+    sock.send(f"PRIVMSG #{config.channel} : @{username} Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
 
 def stick(username: str):
-    sock.send(f"PRIVMSG #{config.channel} : {username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
+    sock.send(f"PRIVMSG #{config.channel} : @{username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
 
 # main 
 def main():
@@ -158,18 +163,24 @@ def main():
 
     broadcaster_id, bot_id = get_ids(token)
 
-    # connects to twitch irc
-    sock.connect((server, port))
-    sock.send(f"PASS oauth:{config.oath_token}\n".encode('utf-8'))
-    sock.send(f"NICK {config.bot_name}\n".encode('utf-8'))
-    sock.send(f"JOIN #{config.channel}\n".encode('utf-8'))
-    sock.send(f"CAP REQ :twitch.tv/tags twitch.tv/commands\n".encode('utf-8'))
+    connect_to_irc()
 
     # main loop reading message
     while True:
+        # select to check if sock connection still active
+        try:
+            ready_to_read, ready_to_write, in_error = \
+            select.select([sock,], [sock,], [], 5)
+        except select.error:
+            sock.shutdown(2)    # 0 = done receiving, 1 = done sending, 2 = both
+            sock.close()
+            logging.error(f"irc connection failed, attempting reconnect")
+            connect_to_irc()
+
         # gets messages in chat
         resp = sock.recv(2048).decode('utf-8')
         logging.debug(resp)
+
         # returns pong when twitch sends a ping to keep connection alive
         if resp.startswith('PING'):
             print(f"Ping message from twitch: {resp}")
@@ -181,14 +192,14 @@ def main():
 
             if "!clip" in message:
                 logging.debug(f"triggered clip for {username}")
-                clip(broadcaster_id, token, message_headers)
+                clip(broadcaster_id, token, message_headers, username)
 
             if "!getclip" in message:
-                get_clip()
+                get_clip(username)
 
             if "!stick" in message:
                 stick(username)
-
+        
 if __name__ == "__main__":
     # log exceptions
     sys.excepthook = housey_logging.log_exception
