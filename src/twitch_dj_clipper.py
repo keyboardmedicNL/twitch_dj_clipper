@@ -200,6 +200,9 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
 def get_clip(username: str):
     sock.send(f"PRIVMSG #{config.channel} : @{username} Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
 
+def clip_help(username: str):
+    sock.send(f"PRIVMSG #{config.channel} : @{username} !clip <clip title> to save a clip timestamp with a title, !getclip to get the link to this bots github page, !stick to see how big your stick is \n".encode('utf-8'))
+
 def stick(username: str):
     sock.send(f"PRIVMSG #{config.channel} : @{username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
 
@@ -259,6 +262,9 @@ def main():
 
             if "!stick" in message:
                 stick(username)
+
+            if "!cliphelp" in message:
+                clip_help(username)
         
 if __name__ == "__main__":
     # log exceptions
