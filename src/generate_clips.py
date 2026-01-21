@@ -29,9 +29,8 @@ def create_clips(input_file: str, output_file_type: str, list_of_clip_timestamps
         clip_start_time = timestamp_to_time_str(int(clip_list[0]) - int(config.clip_start_before_timestamp))
         clip_duration = timestamp_to_time_str(config.total_clip_duration)
 
-        output_folder= os.path.join(output_path,username)
-        if not exists(output_folder):
-            os.mkdir(output_folder)
+        output_folder = os.path.join(output_path,username)
+        os.makedirs(output_folder, exist_ok=True)
 
         command = (
             f'ffmpeg -i {{}} '
@@ -96,10 +95,15 @@ def timestamp_to_time_str(time_stamp) -> str:
     minutes, seconds = divmod(remainder, 60)
     time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-    return(time_str)
+    return time_str
 
 def get_last_file_in_folder(folder_path: str) -> str:
-    return(max(glob.glob(folder_path), key=os.path.getctime))
+    folder_path_path = os.path.expanduser(folder_path)
+    folder_glob = glob.glob(folder_path_path)
+    if len(folder_glob) == 0:
+        raise RuntimeError(f"Folder {folder_path_path} is empty")
+
+    return max(folder_glob, key=os.path.getctime)
 
 def main():
     logging.info("starting twitch dj clipper")
