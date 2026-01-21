@@ -1,13 +1,12 @@
 import subprocess
+
 import housey_logging
+
 housey_logging.configure()
 
 import logging
-import time
-import datetime
 import sys
 import os
-from os.path import exists
 import config_loader
 import glob
 import re
