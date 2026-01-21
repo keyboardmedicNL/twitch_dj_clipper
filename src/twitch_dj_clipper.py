@@ -18,6 +18,7 @@ from os.path import exists
 import config_loader
 import random
 import select
+import re
 
 #variables
 sock = socket.socket()
@@ -134,15 +135,17 @@ def validate_token(token_to_validate:str = token, is_user_oath: bool = False):
             get_auth_workaround()
             
 # twitch commands logic
-def clip(broadcaster_id: int, message_headers: str, username: str):
+def clip(broadcaster_id: int, message_headers: str, username: str, message: str):
 
     is_live = False
+    clip_title = "no title"
 
     if check_mod_or_broadcaster(message_headers):
 
         api_call_succes = False
         error_count = 0
 
+        # error handling for twitch api calls
         while not api_call_succes:
             get_stream_response = requests.get(url=f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}",headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
             
@@ -178,15 +181,18 @@ def clip(broadcaster_id: int, message_headers: str, username: str):
 
             clips_file = os.path.join("clip timestamps",f"clips-{started_date}.txt")
 
+            if clip_title_match := re.findall("!clip (.*)\\r\\n", message, re.MULTILINE | re.IGNORECASE): 
+                clip_title = str(clip_title_match[0])
+
             if not exists(clips_file):
                 with open(clips_file, 'w') as File:
                     File.write("")
 
             with open(clips_file, 'a') as File:
-                File.write(f"{elapsed_timestamp}\n")
+                File.write(f"{elapsed_timestamp},{username},{clip_title}\n")
 
-            sock.send(f"PRIVMSG #{config.channel} :MrDestructoid saved timestap for clip {elapsed_time_formatted} MrDestructoid\n".encode('utf-8'))
-            logging.debug(f"saved timestap for clip {elapsed_time_formatted}")
+            sock.send(f"PRIVMSG #{config.channel} :MrDestructoid saved timestamp for clip {elapsed_time_formatted} MrDestructoid\n".encode('utf-8'))
+            logging.debug(f"saved timestamp for clip {elapsed_time_formatted} with title {clip_title} for user {username}")
     
     else:
         sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
@@ -246,7 +252,7 @@ def main():
 
             if "!clip" in message:
                 logging.debug(f"triggered clip for {username}")
-                clip(broadcaster_id, message_headers, username)
+                clip(broadcaster_id, message_headers, username, message)
 
             if "!getclip" in message:
                 get_clip(username)
