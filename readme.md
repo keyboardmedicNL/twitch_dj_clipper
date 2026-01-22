@@ -1,5 +1,5 @@
 # what does it do?
-runs locally and saves timestamps to a file trough a !clip command only accessable to mods and the broadcaster
+runs locally and saves timestamps to a file trough a ```!clip (clip title)``` command only accessable to mods and the broadcaster
 
 after stream you run the clip generator and point it to your clips timestamp file and to the corresponding locally recorded vod and it will create clips at the timestamp with a set time, or alternativly, tell it to use the last files in both folders to run automagicly
 
@@ -7,8 +7,9 @@ the clips will be sorted in folder by creator in the ```clips``` folder in the r
 
 # how to run:
 1. install uv https://docs.astral.sh/uv/getting-started/installation/
-2. copy the ```example_config.yaml``` and rename it to ```config.yaml```
-3. adjust the values as need
+2. install ffmpeg https://ffmpeg.org/download.html
+3. copy the ```example_config.yaml``` and rename it to ```config.yaml```
+4. adjust the values as need
 ```
 bot_name: 'the username of your bot account'
 oath_token: 'your_oath_token' #generated on first run of the script
@@ -22,8 +23,8 @@ vod_folder_path: "/path/to/your/vods/folder
 output_file_type: "mp4"
 allow_stick: True # wether or not to allow the !stick command
 ```
-4. run the twitch chat bot with the following command in the root of the project ```uv run main.py```
-5. when you are ready to generate your clips run the following command in the root of the project ```uv run generate_clips.py```
+5. run the twitch chat bot with the following command in the root of the project ```uv run main.py```
+6. when you are ready to generate your clips run the following command in the root of the project ```uv run generate_clips.py```
 * alternativly you can run the appropriate ```start twitchbot``` or ```start clip generator``` files for your os
 
 A docker image is also available at ```keyboardmedic/twitch_dj_clipper:latest```
