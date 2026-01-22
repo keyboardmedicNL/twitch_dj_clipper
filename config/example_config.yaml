@@ -1,0 +1,11 @@
+bot_name: 'the username of your bot account'
+oath_token: 'your_oath_token' #generated on first run of the script
+channel: 'the username of the channel the bot should join'
+twitch_api_id: "your twitch api id"
+twitch_api_secret: "your twitch api secret"
+clip_start_before_timestamp: 30 #seconds
+total_clip_duration: 60 #seconds
+metadata_artist: clipper #name added to the clip files metadata
+vod_folder_path: "/path/to/your/vods/folder
+output_file_type: "mp4"
+allow_stick: True # wether or not to allow the !stick command

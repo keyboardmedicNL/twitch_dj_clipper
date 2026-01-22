@@ -183,6 +183,8 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
             if clip_title_match := re.findall("!clip (.*)\\r\\n", message, re.MULTILINE | re.IGNORECASE): 
                 clip_title = str(clip_title_match[0])
 
+            os.makedirs("clip timestamps", exist_ok=True)
+
             if not exists(clips_file):
                 with open(clips_file, 'w') as File:
                     File.write("")
@@ -209,7 +211,7 @@ def stick(username: str):
 def main():
 
     global config
-    config = config_loader.load_config()
+    config = src.config_loader.load_config()
 
     global token
     get_token()

@@ -1,14 +1,17 @@
-from src import housey_logging
-housey_logging.configure()
+import src.housey_logging
+src.housey_logging.configure()
 
 import sys
-from src import twitch_dj_clipper
+import src.twitch_dj_clipper
+import logging
 
 def main():
-    twitch_dj_clipper.main()
+    logging.info("starting twitch_dj_clipper twitch chatbot")
+    logging.info("only errors will be displayed unless otherwise configured")
+    src.twitch_dj_clipper.main()
 
 
 if __name__ == "__main__":
-    sys.excepthook = housey_logging.log_exception
+    sys.excepthook = src.housey_logging.log_exception
 
     main()
