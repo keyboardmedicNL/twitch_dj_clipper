@@ -1,4 +1,2 @@
 - fix oath flow
 - make script start files for all os
-- add creator tag and split clips to folder based on creators
-- test macos functionality

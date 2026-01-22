@@ -1,13 +1,13 @@
 import subprocess
 
-import housey_logging
+import src.housey_logging
 
-housey_logging.configure()
+src.housey_logging.configure()
 
 import logging
 import sys
 import os
-import config_loader
+import src.config_loader
 import glob
 import re
 
@@ -175,7 +175,7 @@ def main():
 if __name__ == "__main__":
 
     # log exceptions
-    sys.excepthook = housey_logging.log_exception
+    sys.excepthook = src.housey_logging.log_exception
 
-    config = config_loader.load_config()
+    config = src.config_loader.load_config()
     main()

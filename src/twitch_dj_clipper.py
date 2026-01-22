@@ -1,5 +1,4 @@
-import housey_logging
-housey_logging.configure()
+import src.housey_logging
 
 import logging
 import socket
@@ -15,7 +14,7 @@ import datetime
 import sys
 import os
 from os.path import exists
-import config_loader
+import src.config_loader
 import random
 import select
 import re
@@ -208,6 +207,7 @@ def stick(username: str):
 
 # main 
 def main():
+
     global config
     config = config_loader.load_config()
 
@@ -265,9 +265,3 @@ def main():
 
             if "!cliphelp" in message:
                 clip_help(username)
-        
-if __name__ == "__main__":
-    # log exceptions
-    sys.excepthook = housey_logging.log_exception
-
-    main()
