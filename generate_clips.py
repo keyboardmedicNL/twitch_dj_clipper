@@ -20,6 +20,8 @@ def create_clips(input_file: str, output_file_type: str, list_of_clip_timestamps
         clip_list = clip_stamp.split(",")
         username = sanitize_filename(clip_list[1])
         clip_title = clip_list[2].replace(" ", "-")
+        if clip_title == "no-title":
+            clip_title = f"no-title-{i}"
         file_title = f"{config.channel}_{username}_{clip_title}_{clip_date}"
         sanitized_name = sanitize_filename(file_title)
         
@@ -65,6 +67,9 @@ def wrap_string(user_input: str) -> str:
         user_input = f"'{user_input}'"
 
     return(user_input)
+
+def remove_trailing(user_input: str) -> str:
+    return(user_input.strip())
 
 def get_parent_folder(user_input: str) -> str:
     if "/" in user_input or "\\" in user_input:
@@ -144,6 +149,7 @@ def main():
                 clips_file = input("please provide path to the clips timestamp file you want to use\n")
 
             #clips_file = wrap_string(clips_file)
+            clips_file = remove_trailing(clips_file)
             clips_file_parent = get_parent_folder(clips_file)
 
             # get clip timestamps from file
@@ -161,7 +167,8 @@ def main():
             else:
                 input_file = input("please provide path to the vod you want to use\n")
 
-            input_file = wrap_string(input_file)
+            #input_file = wrap_string(input_file)
+            input_file = remove_trailing(input_file)
 
             vod_file_parent = get_parent_folder(input_file)
 
