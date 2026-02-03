@@ -14,7 +14,7 @@ import re
 output_path = "clips"
 clips_timestamp_files_path = os.path.join("clip timestamps","*")
 
-def create_clips(input_file: str, output_file_type: str, list_of_clip_timestamps: list, clip_date:str):
+def create_clips(input_file: str, list_of_clip_timestamps: list, clip_date:str):
     for i, clip_stamp in enumerate(list_of_clip_timestamps):
         
         input_file_type = str(input_file.split(".")[-1])
@@ -175,7 +175,7 @@ def main():
             vod_file_parent = get_parent_folder(input_file)
 
             # creates clips
-            create_clips(input_file, config.output_file_type, list_of_clip_timestamps, clips_date)
+            create_clips(input_file, list_of_clip_timestamps, clips_date)
 
             # continues or exits based on user input
             keep_going = input("do you want to create more clips with different files? (Y) or N\n")
