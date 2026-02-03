@@ -17,6 +17,8 @@ clips_timestamp_files_path = os.path.join("clip timestamps","*")
 def create_clips(input_file: str, output_file_type: str, list_of_clip_timestamps: list, clip_date:str):
     for i, clip_stamp in enumerate(list_of_clip_timestamps):
         
+        input_file_type = str(input_file.split(".")[-1])
+
         clip_list = clip_stamp.split(",")
         username = sanitize_filename(clip_list[1])
         clip_title = clip_list[2].replace(" ", "-")
@@ -25,7 +27,7 @@ def create_clips(input_file: str, output_file_type: str, list_of_clip_timestamps
         file_title = f"{config.channel}_{username}_{clip_title}_{clip_date}"
         sanitized_name = sanitize_filename(file_title)
         
-        output_file = os.path.join(output_path,username,f"{sanitized_name}.{output_file_type}")
+        output_file = os.path.join(output_path,username,f"{sanitized_name}.{input_file_type}")
 
         clip_start_time = timestamp_to_time_str(int(clip_list[0]) - int(config.clip_start_before_timestamp))
         clip_duration = timestamp_to_time_str(config.total_clip_duration)
