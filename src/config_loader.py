@@ -10,8 +10,7 @@ default_config = {
     "clip_start_before_timestamp": 30,
     "total_clip_duration": 60,
     "metadata_artist": "twitch_dj_clipper",
-    "vod_folder_path": "path/to/thingie",
-    "output_file_type": "mp4",
+    "vod_folder_path": "path/to/thingie"
 }
 
 # loads config from file

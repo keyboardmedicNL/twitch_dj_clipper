@@ -20,7 +20,6 @@ clip_start_before_timestamp: 90 #seconds, the amount of time to go back from the
 total_clip_duration: 180 #seconds, the total time in second of how long you want your final clip to be
 metadata_artist: twitch_dj_clipper #name added to the clip files metadata
 vod_folder_path: "/path/to/your/vods/folder" #path to your vods folder used for generating clips with the latest files automagicly
-output_file_type: "mp4" #the file type you would like to get your clips in
 allow_stick: True # wether or not to allow the !stick command, a small easter egg wich returns a "<username> has a <random> cm stick"
 ```
 5. run the twitch chat bot with the following command in the root of the project ```uv run main.py```
