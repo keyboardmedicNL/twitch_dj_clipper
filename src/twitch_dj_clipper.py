@@ -106,7 +106,7 @@ def get_ids() -> tuple[int,int]:
 def create_sock():
     global sock
     sock = socket.socket()
-    sock.settimeout(10)
+    sock.settimeout(60)
 
 def connect_to_irc():
     sock.connect((server, port))
@@ -137,10 +137,24 @@ def validate_token(token_to_validate:str = token, is_user_oath: bool = False):
 
         else:
             get_auth_workaround()
-            
+
+def recv_socket_message() -> str :
+    response = sock.recv(2048).decode('utf-8')
+    return(response)
+
+def reconnect_sock(error_count: int):
+    times_reconnected = error_count + 1
+    sock.close()
+    create_sock()
+    connect_to_irc()
+    return(times_reconnected)
+
+def handle_resp(response_raw: str) -> str:
+        return(response_raw.splitlines())
+
 # twitch commands logic
 def clip(broadcaster_id: int, message_headers: str, username: str, message: str):
-
+    logging.debug(f"triggered clip for {username}")
     is_live = False
     clip_title = "no title"
 
@@ -204,26 +218,16 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
         sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
 
 def get_clip(username: str):
+    logging.debug(f"triggered getclip for {username}")
     sock.send(f"PRIVMSG #{config.channel} : @{username} Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
 
 def clip_help(username: str):
+    logging.debug(f"triggered cliphelp for {username}")
     sock.send(f"PRIVMSG #{config.channel} : @{username} !clip <clip title> to save a clip timestamp with a title, !getclip to get the link to this bots github page, !stick to see how big your stick is \n".encode('utf-8'))
 
 def stick(username: str):
+    logging.debug(f"triggered clip for {username}")
     sock.send(f"PRIVMSG #{config.channel} : @{username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
-
-def recv_socket_message() -> str :
-    response = sock.recv(2048).decode('utf-8')
-    logging.debug(response)
-    return(response)
-
-def reconnect_sock():
-    sock.close()
-    create_sock()
-    connect_to_irc()
-
-def handle_resp(response_raw: str) -> str:
-        return(response_raw.splitlines())
 
 # main 
 def main():
@@ -245,28 +249,34 @@ def main():
 
     # main loop reading message
     while True:
+        if error_count == 3:
+            raise RuntimeError("tried to reconnect to chat 10 times and failed")
+
         try:
 
             # gets messages in chat and splits them to a list incase multiple messages came in at the same time
             response_raw = recv_socket_message()
 
             if len(response_raw) > 0:
+                error_count = 0
                 response_list = handle_resp(response_raw)
 
                 for resp in response_list:
                     logging.debug(f"processing message: {resp}")
-                    
+
                     # returns pong when twitch sends a ping to keep connection alive
                     if resp.startswith('PING'):
                         logging.debug(f"Ping message from twitch: {resp}")
                         sock.send("PONG\n".encode('utf-8'))
+
+                    #if "tmi.twitch.tv CAP * ACK :twitch.tv/tags twitch.tv/commands" in resp:
+                    #    sock.send(f"PRIVMSG #{config.channel} : clipper ready to go! MrDestructoid  \n".encode('utf-8'))
 
                     elif len(resp) > 0 and "PRIVMSG" in resp:
                         message_headers, message = resp.split("PRIVMSG", 1)
                         username = get_username(resp)
 
                         if "!clip" in message:
-                            logging.debug(f"triggered clip for {username}")
                             clip(broadcaster_id, message_headers, username, message)
 
                         if "!getclip" in message:
@@ -295,11 +305,11 @@ def main():
 
                     else:
                         logging.debug("attempting to reconnect to chat")
-                        reconnect_sock()
+                        error_count = reconnect_sock(error_count)
 
             except socket.timeout:
                 logging.debug("attempting to reconnect to chat")
-                reconnect_sock()
+                error_count = reconnect_sock(error_count)
 
             except Exception as e:
                 raise RuntimeError(e)
