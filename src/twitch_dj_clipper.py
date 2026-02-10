@@ -20,7 +20,7 @@ import select
 import re
 
 #variables
-sock = socket.socket()
+
 server = 'irc.chat.twitch.tv'
 port = 6667
 oath_url = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot&state=c3ab8aa609ea11e793ae92361f002671"
@@ -102,6 +102,11 @@ def get_ids() -> tuple[int,int]:
     getbot_responsejson = getbot_response.json()
     bot_id = getbot_responsejson["data"][0]["id"]
     return(broadcaster_id,bot_id)
+
+def create_sock():
+    global sock
+    sock = socket.socket()
+    sock.settimeout(10)
 
 def connect_to_irc():
     sock.connect((server, port))
@@ -207,6 +212,19 @@ def clip_help(username: str):
 def stick(username: str):
     sock.send(f"PRIVMSG #{config.channel} : @{username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
 
+def recv_socket_message() -> str :
+    response = sock.recv(2048).decode('utf-8')
+    logging.debug(response)
+    return(response)
+
+def reconnect_sock():
+    sock.close()
+    create_sock()
+    connect_to_irc()
+
+def handle_resp(response_raw: str) -> str:
+        return(response_raw.splitlines())
+
 # main 
 def main():
 
@@ -220,50 +238,70 @@ def main():
 
     broadcaster_id, bot_id = get_ids()
 
+    create_sock()
     connect_to_irc()
 
     error_count = 0
 
     # main loop reading message
     while True:
-        # select to check if sock connection still active
         try:
-            ready_to_read, ready_to_write, in_error = \
-            select.select([sock,], [sock,], [], 5)
-        except select.error:
-            error_count = error_count + 1
 
-            if error_count <= 3:
-                sock.shutdown(2)    # 0 = done receiving, 1 = done sending, 2 = both
-                sock.close()
+            # gets messages in chat and splits them to a list incase multiple messages came in at the same time
+            response_raw = recv_socket_message()
 
-                logging.error(f"irc connection failed, attempting reconnect")
-                connect_to_irc()
-            else:
-                raise RuntimeError("unable to connect to twitch chat after trying 3 times")
+            if len(response_raw) > 0:
+                response_list = handle_resp(response_raw)
 
-        # gets messages in chat
-        resp = sock.recv(2048).decode('utf-8')
-        logging.debug(resp)
+                for resp in response_list:
+                    logging.debug(f"processing message: {resp}")
+                    
+                    # returns pong when twitch sends a ping to keep connection alive
+                    if resp.startswith('PING'):
+                        logging.debug(f"Ping message from twitch: {resp}")
+                        sock.send("PONG\n".encode('utf-8'))
 
-        # returns pong when twitch sends a ping to keep connection alive
-        if resp.startswith('PING'):
-            logging.debug(f"Ping message from twitch: {resp}")
-            sock.send("PONG\n".encode('utf-8'))
+                    elif len(resp) > 0 and "PRIVMSG" in resp:
+                        message_headers, message = resp.split("PRIVMSG", 1)
+                        username = get_username(resp)
 
-        elif len(resp) > 0 and "PRIVMSG" in resp:
-            message_headers, message = resp.split("PRIVMSG", 1)
-            username = get_username(resp)
+                        if "!clip" in message:
+                            logging.debug(f"triggered clip for {username}")
+                            clip(broadcaster_id, message_headers, username, message)
 
-            if "!clip" in message:
-                logging.debug(f"triggered clip for {username}")
-                clip(broadcaster_id, message_headers, username, message)
+                        if "!getclip" in message:
+                            get_clip(username)
 
-            if "!getclip" in message:
-                get_clip(username)
+                        if "!stick" in message:
+                            stick(username)
 
-            if "!stick" in message:
-                stick(username)
+                        if "!cliphelp" in message:
+                            clip_help(username)
 
-            if "!cliphelp" in message:
-                clip_help(username)
+        except socket.timeout:
+            # logic to check if connection is still up or if a reconnect is needed
+            try:
+                logging.debug("socket timed out, sending PING to check connection")
+
+                sock.send("PING\n".encode('utf-8'))
+
+                response_raw = recv_socket_message()
+
+                if len(response_raw) > 0:
+                        
+                    if "PONG" in response_raw:
+                        logging.debug(f"server responded: {response_raw}")
+                        pass
+
+                    else:
+                        logging.debug("attempting to reconnect to chat")
+                        reconnect_sock()
+
+            except socket.timeout:
+                logging.debug("attempting to reconnect to chat")
+                reconnect_sock()
+
+            except Exception as e:
+                raise RuntimeError(e)
+            
+                
