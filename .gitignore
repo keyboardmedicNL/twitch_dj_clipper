@@ -9,3 +9,4 @@
 .venv
 compose.yaml
 test
+__pycache__
