@@ -1,2 +1,4 @@
 #!/bin/bash
-uv run main.py
+source .venv/bin/activate
+python3 main.py
+deactivate

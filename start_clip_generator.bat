@@ -1,2 +1,2 @@
 @echo off
-uv run generate_clips.py
+python333 generate_clips.py

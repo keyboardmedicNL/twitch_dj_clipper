@@ -1,2 +1,4 @@
 #!/bin/bash
-uv run generate_clip.py
+source .venv/bin/activate
+python3 generate_clip.py
+deactivate
