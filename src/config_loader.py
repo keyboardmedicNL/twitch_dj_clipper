@@ -13,6 +13,7 @@ default_config = {
     "vod_folder_path": "path/to/thingie",
     "quiet": False,
     "extra_params": ""
+    "log_messages": False
 }
 
 # loads config from file
