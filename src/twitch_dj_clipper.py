@@ -116,12 +116,12 @@ def handle_resp(response_raw: str) -> str:
 def log_messages(username: str,message: str):
     if config.log_messages:
         message_trimmed = message.split(":",1)[1]
-        with open ("chat_log.txt", "a") as chat_file:
+        with open ("config/chat_log.log", "a") as chat_file:
             chat_file.write(f"{datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %X")}: {username}: {message_trimmed}\n")
 
 def create_chat_log():
     if config.log_messages:
-        chat_log = "chat_log.txt"
+        chat_log = "config/chat_log.log"
         if not exists(chat_log):
             with open (chat_log, "w") as chat_file:
                 chat_file.write("")

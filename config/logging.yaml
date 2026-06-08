@@ -16,7 +16,7 @@ handlers:
     class: logging.FileHandler
     level: DEBUG #set to DEBUG for debugging. INFO for normal console logging
     formatter: standard
-    filename: ./config/assetto_bot.log
+    filename: ./config/twitch_dj_clipper.log
     encoding: utf-8
 
 root:
