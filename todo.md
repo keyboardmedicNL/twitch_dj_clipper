@@ -1,1 +1,5 @@
 - add ability to run clip generator in container
+- remove uv dependency in docker
+- fix windows start scripts to work with venv
+- merge baloe edits
+- add first time chatter flag, announcements, restricted/suspicious user flags and mod actions to chat log
