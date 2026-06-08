@@ -113,15 +113,16 @@ def reconnect_sock(error_count: int):
 def handle_resp(response_raw: str) -> str:
         return(response_raw.splitlines())
 
-def log_messages(username: str, message: str):
+def log_messages(username: str,message: str):
     if config.log_messages:
+        message_trimmed = message.split(":",1)[1]
         with open ("chat_log.txt", "a") as chat_file:
-            chat_file.write(f"{datetime.datetime.now()}: {username} {message}")
+            chat_file.write(f"{datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %X")}: {username}: {message_trimmed}\n")
 
 def create_chat_log():
     if config.log_messages:
         chat_log = "chat_log.txt"
-        if not exists(chat_log)
+        if not exists(chat_log):
             with open (chat_log, "w") as chat_file:
                 chat_file.write("")
         
@@ -259,7 +260,7 @@ def main():
                         message_headers, message = resp.split("PRIVMSG", 1)
                         username = get_username(resp)
 
-                        log_messages()
+                        log_messages(username, message)
 
                         if "!clip" in message:
                             clip(broadcaster_id, message_headers, username, message)
