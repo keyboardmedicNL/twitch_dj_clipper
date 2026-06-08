@@ -113,6 +113,19 @@ def reconnect_sock(error_count: int):
 def handle_resp(response_raw: str) -> str:
         return(response_raw.splitlines())
 
+def log_messages(username: str, message: str):
+    if config.log_messages:
+        with open ("chat_log.txt", "a") as chat_file:
+            chat_file.write(f"{datetime.datetime.now()}: {username} {message}")
+
+def create_chat_log():
+    if config.log_messages:
+        chat_log = "chat_log.txt"
+        if not exists(chat_log)
+            with open (chat_log, "w") as chat_file:
+                chat_file.write("")
+        
+            
 # twitch commands logic
 def clip(broadcaster_id: int, message_headers: str, username: str, message: str):
     logging.debug(f"triggered clip for {username}")
@@ -209,6 +222,8 @@ def main():
 
     error_count = 0
 
+    create_chat_log()
+
     # main loop reading message
     while True:
         if error_count == 3:
@@ -243,6 +258,8 @@ def main():
                     elif (len(resp) > 0 and "PRIVMSG" in resp) and (not config.quiet):
                         message_headers, message = resp.split("PRIVMSG", 1)
                         username = get_username(resp)
+
+                        log_messages()
 
                         if "!clip" in message:
                             clip(broadcaster_id, message_headers, username, message)
