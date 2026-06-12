@@ -223,8 +223,6 @@ def main():
 
     error_count = 0
 
-    create_chat_log()
-
     # main loop reading message
     while True:
         if error_count == 3:
@@ -259,8 +257,6 @@ def main():
                     elif (len(resp) > 0 and "PRIVMSG" in resp) and (not config.quiet):
                         message_headers, message = resp.split("PRIVMSG", 1)
                         username = get_username(resp)
-
-                        log_messages(username, message)
 
                         if "!clip" in message:
                             clip(broadcaster_id, message_headers, username, message)
