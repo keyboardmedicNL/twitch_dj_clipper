@@ -1,3 +1,6 @@
+# IMPORTANT
+this is a command line tool, if you are not comfortable using the command line this is not for you... I will not teach you how to use a command line.
+
 # what does it do?
 runs locally and saves timestamps to a file trough a ```!clip (clip title)``` command only accessable to mods and the broadcaster, wich will save a timestamp, the clip creators username and the title seperated by comma's to a txt file wich is called ```clips-(current date).txt```
 
@@ -6,10 +9,11 @@ after stream you run the clip generator and point it to your clips timestamp fil
 to get a link to the github in your chat you can use ```!getclip``` or to use the build in easter egg command you can use ```!stick```
 
 # how to run:
-1. install uv https://docs.astral.sh/uv/getting-started/installation/
-2. install ffmpeg https://ffmpeg.org/download.html
-3. copy the ```example_config.yaml``` and rename it to ```config.yaml```
-4. adjust the values as need
+1. set up a python virtual enviroment ```python3 -m venv .venv```
+2. install the required dependencies ``` pip install -r requirements ```
+3. install ffmpeg https://ffmpeg.org/download.html (if not added to path you must add the ffmpeg binary in the root of the scripts folder)
+4. copy the ```example_config.yaml``` and rename it to ```config.yaml```
+5. adjust the values as need
 ```
 bot_name: 'the username of your bot account all lowercase' 
 oath_token: 'your_oath_token' #generated on first run of the script by following instructions in the terminal
@@ -25,9 +29,7 @@ quiet: False # the script will run without interacting with chat and only connec
 extra_params: "" # a string of extra ffmpeg parameters to use in the clip generation that will be inserted before the output file is defined in the ffmpeg command, the ffmpeg command included in the generate_clips is 'ffmpeg -i {{}} -ss {clip_start_time} -t {clip_duration} -metadata artist="{config.metadata_artist}" -metadata title="{file_title}" {config.extra_params} -c copy {{}}'
 
 ```
-5. run the twitch chat bot with the following command in the root of the project ```uv run main.py```
-6. when you are ready to generate your clips run the following command in the root of the project ```uv run generate_clips.py```
-* alternativly you can run the appropriate ```start_twitchbot``` or ```start_clip_generator``` files for your os
+6. to run the main bot excecute the ```start_twitchbot``` file for your os. When you want to generate the clips execute the ```start_clip_generator``` file for your os.
 
 A docker image is also available at ```keyboardmedic/twitch_dj_clipper:latest```
 
