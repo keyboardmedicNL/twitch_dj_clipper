@@ -1,3 +1,5 @@
+# CURRENT README IS OUT OF DATE... will fix later
+
 # what does it do?
 runs locally and saves timestamps to a file trough a ```!clip (clip title)``` command only accessable to mods and the broadcaster, wich will save a timestamp, the clip creators username and the title seperated by comma's to a txt file wich is called ```clips-(current date).txt```
 
