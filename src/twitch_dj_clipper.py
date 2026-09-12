@@ -200,7 +200,7 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
 
 def viewer_clip(broadcaster_id: str, username: str):
     requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
-    sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully Bezos lets us keep this one \n".encode('utf-8'))
+    sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
 
 def get_clip(username: str):
     logging.debug(f"triggered getclip for {username}")
