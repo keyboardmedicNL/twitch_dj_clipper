@@ -10,4 +10,6 @@ vod_folder_path: "/path/to/your/vods/folder" #path to your vods folder used for 
 allow_stick: True # wether or not to allow the !stick command, a small easter egg wich returns a "<username> has a <random> cm stick"
 quiet: False # the script will run without interacting with chat and only connect for debugging purposes
 extra_params: "" # a string of extra ffmpeg parameters to use in the clip generation that will be inserted before the output file is defined in the ffmpeg command, the ffmpeg command included in the generate_clips is 'ffmpeg -i {{}} -ss {clip_start_time} -t {clip_duration} -metadata artist="{config.metadata_artist}" -metadata title="{file_title}" {config.extra_params} -c copy {{}}'
-
+allow_viewer_clips: true # allows viewers to make automated clips with the !clip command
+mods_make_normal_clips: true # !clip command for mods triggers timestamp logic aswell as normal twitch clip creation
+use_timestamps: true # create timestamps for use with the clip generator script on !clip command
