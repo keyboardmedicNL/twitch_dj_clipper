@@ -1,3 +1,4 @@
 - add ability to run clip generator in container
 - fix windows start scripts to work with venv
 - merge baloe edits
+- figure out how to restart on disconnects

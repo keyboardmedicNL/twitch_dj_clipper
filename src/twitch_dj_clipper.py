@@ -78,7 +78,7 @@ def connect_to_irc():
 
 def get_auth_workaround():
     logging.info("please open the following link in a browser and authorize, once done copy the acces_token value from your url in the browser to the config.yaml:")
-    logging.info("https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot&state=c3ab8aa609ea11e793ae92361f002671")
+    logging.info("https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot+chat%3Aedit+chat%3Aread+clips%3Aedit&state=c3ab8aa609ea11e793ae92361f002671")
     raise RuntimeError("restart the script once you have updated your oath_token in config.yaml")
 
 def validate_token(token_to_validate:str = token, is_user_oath: bool = False):
@@ -258,7 +258,7 @@ def main():
                         message_headers, message = resp.split("PRIVMSG", 1)
                         username = get_username(resp)
 
-                        if (shmoovin_match := re.findall("!clip\s|!clip$", message)):
+                        if (re.findall('!clip\s|!clip$', message)):
                             clip(broadcaster_id, message_headers, username, message)
 
                         if "!getclip" in message:
@@ -269,6 +269,7 @@ def main():
 
                         if "!cliphelp" in message:
                             clip_help(username)
+                            
 
         except socket.timeout:
             # logic to check if connection is still up or if a reconnect is needed
