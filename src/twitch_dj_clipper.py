@@ -14,7 +14,6 @@ import re
 
 server = 'irc.chat.twitch.tv'
 port = 6667
-oath_url = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot&state=c3ab8aa609ea11e793ae92361f002671"
 token = ""
 
 def timestamp_to_time_str(time_stamp) -> str:
@@ -199,8 +198,9 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
                 sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
 
 def viewer_clip(broadcaster_id: str, username: str):
-    requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
+    clip_response = requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
     sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
+    logging.debug(f"attempted to make a clip trough the twitch api with response {str(clip_response.status_code)}")
 
 def get_clip(username: str):
     logging.debug(f"triggered getclip for {username}")
