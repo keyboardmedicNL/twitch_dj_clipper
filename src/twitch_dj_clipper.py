@@ -130,38 +130,36 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
     logging.debug(f"triggered clip for {username}")
     is_live = False
     clip_title = "no_title"
+    api_call_succes = False
+    error_count = 0
 
-    if config.use_timestamps:
+    # error handling for twitch api calls
+    while not api_call_succes:
+        get_stream_response = requests.get(url=f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}",headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
+        
+        if get_stream_response.ok:
+            api_call_succes = True
+        else:
+            error_count = error_count + 1
+            validate_token(token)
+        
+        if error_count >= 5:
+            raise RuntimeError("tried 5 times to complete twitch api request and failed")
+
+    get_stream_json = get_stream_response.json()
+
+    try: 
+        if str(get_stream_json["data"][0]["type"]).lower() == "live":
+            is_live = True
+            logging.debug(f"{config.channel} is live")
     
-        api_call_succes = False
-        error_count = 0
-
-        # error handling for twitch api calls
-        while not api_call_succes:
-            get_stream_response = requests.get(url=f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}",headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
-            
-            if get_stream_response.ok:
-                api_call_succes = True
-            else:
-                error_count = error_count + 1
-                validate_token(token)
-            
-            if error_count >= 5:
-                raise RuntimeError("tried 5 times to complete twitch api request and failed")
-
-        get_stream_json = get_stream_response.json()
-
-        try: 
-            if str(get_stream_json["data"][0]["type"]).lower() == "live":
-                is_live = True
-                logging.debug(f"{config.channel} is live")
-        
-        except:
-            sock.send(f"PRIVMSG #{config.channel} : @{username} {config.channel} is not live \n".encode('utf-8'))
-            logging.debug(f"{config.channel} is not live")
-        
-        if is_live:
-            if check_mod_or_broadcaster(message_headers):
+    except:
+        sock.send(f"PRIVMSG #{config.channel} : @{username} {config.channel} is not live \n".encode('utf-8'))
+        logging.debug(f"{config.channel} is not live")
+    
+    if is_live:
+        if check_mod_or_broadcaster(message_headers):
+            if config.use_timestamps:
                 started_time = get_stream_json["data"][0]["started_at"]
                 started_time = datetime.datetime.fromisoformat(started_time)
                 started_timestamp = int(started_time.timestamp())
@@ -188,18 +186,19 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
 
                 sock.send(f"PRIVMSG #{config.channel} :MrDestructoid saved timestamp for clip {elapsed_time_formatted} MrDestructoid\n".encode('utf-8'))
                 logging.debug(f"saved timestamp for clip {elapsed_time_formatted} with title {clip_title} for user {username} in file {clips_file}")
-                
-                if config.mods_make_normal_clips:
-                    viewer_clip(broadcaster_id, username)
             
-            elif config.allow_viewer_clips:
-                viewer_clip(broadcaster_id, username)
-            else:
-                sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
+            if config.mods_make_normal_clips:
+                viewer_clip(broadcaster_id, username, config.use_timestamps)
+        
+        elif config.allow_viewer_clips:
+            viewer_clip(broadcaster_id, username, True)
+        else:
+            sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
 
-def viewer_clip(broadcaster_id: str, username: str):
+def viewer_clip(broadcaster_id: str, username: str, hide_message: bool):
     clip_response = requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
-    sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
+    if not hide_message:
+        sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
     logging.debug(f"attempted to make a clip trough the twitch api with response {str(clip_response.status_code)}")
 
 def get_clip(username: str):
