@@ -191,7 +191,7 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
                 viewer_clip(broadcaster_id, username, config.use_timestamps)
         
         elif config.allow_viewer_clips:
-            viewer_clip(broadcaster_id, username, True)
+            viewer_clip(broadcaster_id, username, False)
         else:
             sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
 
