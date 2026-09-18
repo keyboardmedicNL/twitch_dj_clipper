@@ -33,6 +33,7 @@ mods_make_normal_clips: true # !clip command for mods triggers timestamp logic a
 use_timestamps: true # create timestamps for use with the clip generator script on !clip command
 ```
 3. install ffmpeg https://ffmpeg.org/download.html (if not added to path you must add the ffmpeg binary in the root of the scripts folder)
+4. ensure your twitch api application used in the config has its oath redirect urls set to ```https://localhost```
 
 ## scripted run (recommended):
 to run the main bot excecute the ```start_twitchbot``` file for your os. When you want to generate the clips execute the ```start_clip_generator``` file for your os (.sh for linux/mac, .bat for windows).
