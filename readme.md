@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-# CURRENT README IS OUT OF DATE... will fix later
-=======
 # IMPORTANT
 this is a command line tool, if you are not comfortable using the command line this is not for you... I will not teach you how to use a command line.
->>>>>>> nightly
 
 # what does it do?
 runs locally and saves timestamps to a file trough a ```!clip (clip title)``` command only accessable to mods and the broadcaster, wich will save a timestamp, the clip creators username and the title seperated by comma's to a txt file wich is called ```clips-(current date).txt```
