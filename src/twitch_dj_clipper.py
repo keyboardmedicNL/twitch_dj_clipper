@@ -196,10 +196,14 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
             sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
 
 def viewer_clip(broadcaster_id: str, username: str, hide_message: bool):
-    clip_response = requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
-    if not hide_message:
-        sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
-    logging.debug(f"attempted to make a clip trough the twitch api with response {str(clip_response.status_code)}")
+    try:
+        clip_response = requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
+        if not hide_message:
+            sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
+        logging.debug(f"attempted to make a clip trough the twitch api with response {str(clip_response.status_code)}")
+    except Exception as e:
+        logging.debug(f"an exception occured whilst attempting to create a clip trough the twitch api: {e})
+        sock.send(f"PRIVMSG #{config.channel} : unable to create a clip trough the api, check the logs for more details \n".encode('utf-8'))
 
 def get_clip(username: str):
     logging.debug(f"triggered getclip for {username}")
