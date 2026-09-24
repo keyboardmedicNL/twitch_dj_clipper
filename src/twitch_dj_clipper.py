@@ -270,7 +270,7 @@ def main():
                         message_headers, message = resp.split("PRIVMSG", 1)
                         username = get_username(resp)
 
-                        if (re.findall('!clip\s|!clip$', message)):
+                        if (re.findall(r'!clip\s|!clip$', message)):
                             clip(broadcaster_id, message_headers, username, message)
 
                         if "!getclip" in message:
