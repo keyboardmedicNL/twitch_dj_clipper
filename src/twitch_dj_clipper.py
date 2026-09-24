@@ -202,7 +202,7 @@ def viewer_clip(broadcaster_id: str, username: str, hide_message: bool):
             sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
         logging.debug(f"attempted to make a clip trough the twitch api with response {str(clip_response.status_code)}")
     except Exception as e:
-        logging.debug(f"an exception occured whilst attempting to create a clip trough the twitch api: {e})
+        logging.debug(f"an exception occured whilst attempting to create a clip trough the twitch api: {e}")
         sock.send(f"PRIVMSG #{config.channel} : unable to create a clip trough the api, check the logs for more details \n".encode('utf-8'))
 
 def get_clip(username: str):
