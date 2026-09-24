@@ -14,7 +14,6 @@ import re
 
 server = 'irc.chat.twitch.tv'
 port = 6667
-oath_url = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot&state=c3ab8aa609ea11e793ae92361f002671"
 token = ""
 
 def timestamp_to_time_str(time_stamp) -> str:
@@ -33,7 +32,6 @@ def get_token():
             token_json = response.json()
             global token
             token = token_json["access_token"]
-        
         else:
             raise RuntimeError(f"unable to request new twitch api auth token with response: {response}")
         
@@ -78,7 +76,7 @@ def connect_to_irc():
 
 def get_auth_workaround():
     logging.info("please open the following link in a browser and authorize, once done copy the acces_token value from your url in the browser to the config.yaml:")
-    logging.info("https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=wdsrlwh9xtnmkfh64rdp6a95lrwho7&redirect_uri=http://localhost:8888&scope=channel%3Abot&state=c3ab8aa609ea11e793ae92361f002671")
+    logging.info(f"https://auth.twitch.tv/authorize?response_type=token&client_id={config.twitch_api_id}&redirect_uri=https://localhost&scope=channel%3Abot+chat%3Aedit+chat%3Aread+clips%3Aedit")
     raise RuntimeError("restart the script once you have updated your oath_token in config.yaml")
 
 def validate_token(token_to_validate:str = token, is_user_oath: bool = False):
@@ -132,66 +130,76 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
     logging.debug(f"triggered clip for {username}")
     is_live = False
     clip_title = "no_title"
+    api_call_succes = False
+    error_count = 0
 
-    if check_mod_or_broadcaster(message_headers):
-
-        api_call_succes = False
-        error_count = 0
-
-        # error handling for twitch api calls
-        while not api_call_succes:
-            get_stream_response = requests.get(url=f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}",headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
-            
-            if get_stream_response.ok:
-                api_call_succes = True
-            else:
-                error_count = error_count + 1
-                validate_token(token)
-            
-            if error_count >= 5:
-                raise RuntimeError("tried 5 times to complete twitch api request and failed")
-
-        get_stream_json = get_stream_response.json()
-
-        try: 
-            if str(get_stream_json["data"][0]["type"]).lower() == "live":
-                is_live = True
-                logging.debug(f"{config.channel} is live")
+    # error handling for twitch api calls
+    while not api_call_succes:
+        get_stream_response = requests.get(url=f"https://api.twitch.tv/helix/streams?&user_id={broadcaster_id}",headers={'Authorization':f"Bearer {token}", 'Client-Id':config.twitch_api_id})
         
-        except:
-            sock.send(f"PRIVMSG #{config.channel} : @{username} {config.channel} is not live \n".encode('utf-8'))
-            logging.debug(f"{config.channel} is not live")
+        if get_stream_response.ok:
+            api_call_succes = True
+        else:
+            error_count = error_count + 1
+            validate_token(token)
         
-        if is_live:
-            started_time = get_stream_json["data"][0]["started_at"]
-            started_time = datetime.datetime.fromisoformat(started_time)
-            started_timestamp = int(started_time.timestamp())
-            started_date = f"{started_time.year}-{started_time.month:02d}-{started_time.day:02d}-{started_time.hour:02d}"
+        if error_count >= 5:
+            raise RuntimeError("tried 5 times to complete twitch api request and failed")
 
-            current_time = datetime.datetime.now()
-            current_timestamp = int(current_time.timestamp())
-            elapsed_timestamp = current_timestamp - started_timestamp
-            elapsed_time_formatted = timestamp_to_time_str(elapsed_timestamp)
+    get_stream_json = get_stream_response.json()
 
-            clips_file = os.path.join("clip_timestamps",f"clips-{started_date}.txt")
-
-            if clip_title_match := re.findall("!clip (.*)$", message, re.MULTILINE | re.IGNORECASE): 
-                clip_title = str(clip_title_match[0])
-
-            os.makedirs("clip_timestamps", exist_ok=True)
-
-            if not exists(clips_file):
-                with open(clips_file, 'w') as File:
-                    File.write("")
-
-            with open(clips_file, 'a') as File:
-                File.write(f"{elapsed_timestamp},{username},{clip_title}\n")
-
-            sock.send(f"PRIVMSG #{config.channel} :MrDestructoid saved timestamp for clip {elapsed_time_formatted} MrDestructoid\n".encode('utf-8'))
-            logging.debug(f"saved timestamp for clip {elapsed_time_formatted} with title {clip_title} for user {username} in file {clips_file}")
+    try: 
+        if str(get_stream_json["data"][0]["type"]).lower() == "live":
+            is_live = True
+            logging.debug(f"{config.channel} is live")
     
-    else:
-        sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
+    except:
+        sock.send(f"PRIVMSG #{config.channel} : @{username} {config.channel} is not live \n".encode('utf-8'))
+        logging.debug(f"{config.channel} is not live")
+    
+    if is_live:
+        if check_mod_or_broadcaster(message_headers):
+            if config.use_timestamps:
+                started_time = get_stream_json["data"][0]["started_at"]
+                started_time = datetime.datetime.fromisoformat(started_time)
+                started_timestamp = int(started_time.timestamp())
+                started_date = f"{started_time.year}-{started_time.month:02d}-{started_time.day:02d}-{started_time.hour:02d}"
+
+                current_time = datetime.datetime.now()
+                current_timestamp = int(current_time.timestamp())
+                elapsed_timestamp = current_timestamp - started_timestamp
+                elapsed_time_formatted = timestamp_to_time_str(elapsed_timestamp)
+
+                clips_file = os.path.join("clip_timestamps",f"clips-{started_date}.txt")
+
+                if clip_title_match := re.findall("!clip (.*)$", message, re.MULTILINE | re.IGNORECASE): 
+                    clip_title = str(clip_title_match[0])
+
+                os.makedirs("clip_timestamps", exist_ok=True)
+
+                if not exists(clips_file):
+                    with open(clips_file, 'w') as File:
+                        File.write("")
+
+                with open(clips_file, 'a') as File:
+                    File.write(f"{elapsed_timestamp},{username},{clip_title}\n")
+
+                sock.send(f"PRIVMSG #{config.channel} :MrDestructoid saved timestamp for clip {elapsed_time_formatted} MrDestructoid\n".encode('utf-8'))
+                logging.debug(f"saved timestamp for clip {elapsed_time_formatted} with title {clip_title} for user {username} in file {clips_file}")
+            
+            if config.mods_make_normal_clips:
+                viewer_clip(broadcaster_id, username, config.use_timestamps)
+        
+        elif config.allow_viewer_clips:
+            viewer_clip(broadcaster_id, username, False)
+        else:
+            sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
+
+def viewer_clip(broadcaster_id: str, username: str, hide_message: bool):
+    clip_response = requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
+    if not hide_message:
+        sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
+    logging.debug(f"attempted to make a clip trough the twitch api with response {str(clip_response.status_code)}")
 
 def get_clip(username: str):
     logging.debug(f"triggered getclip for {username}")
@@ -204,6 +212,7 @@ def clip_help(username: str):
 def stick(username: str):
     logging.debug(f"triggered clip for {username}")
     sock.send(f"PRIVMSG #{config.channel} : @{username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
+    
 
 # main 
 def main():
@@ -229,7 +238,6 @@ def main():
             raise RuntimeError("tried to reconnect to chat 3 times and failed")
 
         try:
-
             # gets messages in chat and splits them to a list incase multiple messages came in at the same time
             response_raw = recv_socket_message()
 
@@ -258,7 +266,7 @@ def main():
                         message_headers, message = resp.split("PRIVMSG", 1)
                         username = get_username(resp)
 
-                        if (shmoovin_match := re.findall("!clip\s|!clip$", message)):
+                        if (re.findall('!clip\s|!clip$', message)):
                             clip(broadcaster_id, message_headers, username, message)
 
                         if "!getclip" in message:
@@ -269,7 +277,7 @@ def main():
 
                         if "!cliphelp" in message:
                             clip_help(username)
-
+                            
         except socket.timeout:
             # logic to check if connection is still up or if a reconnect is needed
             try:
@@ -295,5 +303,3 @@ def main():
 
             except Exception as e:
                 raise RuntimeError(e)
-            
-                

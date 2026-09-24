@@ -12,7 +12,10 @@ default_config = {
     "metadata_artist": "twitch_dj_clipper",
     "vod_folder_path": "path/to/thingie",
     "quiet": False,
-    "extra_params": ""
+    "extra_params": "",
+    "allow_viewer_clips": True,
+    "mods_make_normal_clips": True,
+    "use_timestamps": True
 }
 
 # loads config from file
