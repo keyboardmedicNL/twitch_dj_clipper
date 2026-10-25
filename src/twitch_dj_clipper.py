@@ -123,13 +123,76 @@ def create_chat_log():
         if not exists(chat_log):
             with open (chat_log, "w") as chat_file:
                 chat_file.write("")
+
         
-            
 # twitch commands logic
-def clip(broadcaster_id: int, message_headers: str, username: str, message: str):
-    logging.debug(f"triggered clip for {username}")
-    is_live = False
+def timestamp(broadcaster_id: int, message_headers: str, username: str, message: str):
+    logging.debug(f"triggered timestamp for {username}")
     clip_title = "no_title"
+    
+    is_live, get_stream_json = live_check(broadcaster_id, username)
+    
+    if is_live:
+        started_time = get_stream_json["data"][0]["started_at"]
+        started_time = datetime.datetime.fromisoformat(started_time)
+        started_timestamp = int(started_time.timestamp())
+        started_date = f"{started_time.year}-{started_time.month:02d}-{started_time.day:02d}-{started_time.hour:02d}"
+
+        current_time = datetime.datetime.now()
+        current_timestamp = int(current_time.timestamp())
+        elapsed_timestamp = current_timestamp - started_timestamp
+        elapsed_time_formatted = timestamp_to_time_str(elapsed_timestamp)
+
+        clips_file = os.path.join("clip_timestamps",f"clips-{started_date}.txt")
+
+        if clip_title_match := re.findall("!clip (.*)$", message, re.MULTILINE | re.IGNORECASE): 
+            clip_title = str(clip_title_match[0])
+
+        os.makedirs("clip_timestamps", exist_ok=True)
+
+        if not exists(clips_file):
+            with open(clips_file, 'w') as File:
+                File.write("")
+
+        with open(clips_file, 'a') as File:
+            File.write(f"{elapsed_timestamp},{username},{clip_title}\n")
+
+        sock.send(f"PRIVMSG #{config.channel} :MrDestructoid saved timestamp for clip {elapsed_time_formatted} MrDestructoid\n".encode('utf-8'))
+        logging.debug(f"saved timestamp for clip {elapsed_time_formatted} with title {clip_title} for user {username} in file {clips_file}")
+        
+        if config.mods_make_normal_clips:
+            clip(broadcaster_id, username, message_headers, config.mods_make_normal_clips)
+
+def clip(broadcaster_id: str, username: str, message_headers: str, hide_message: bool):
+    is_live, _ = live_check(broadcaster_id, username)
+    
+    if is_live:
+        if check_mod_or_broadcaster(message_headers) or config.allow_viewer_clips:
+            try:
+                clip_response = requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
+                if not hide_message:
+                    sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
+                logging.debug(f"attempted to make a clip trough the twitch api with response {str(clip_response.status_code)}")
+            except Exception as e:
+                logging.debug(f"an exception occured whilst attempting to create a clip trough the twitch api: {e}")
+                sock.send(f"PRIVMSG #{config.channel} : unable to create a clip trough the api, check the logs for more details \n".encode('utf-8'))
+        else:
+            sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
+
+def get_clip(username: str):
+    logging.debug(f"triggered getclip for {username}")
+    sock.send(f"PRIVMSG #{config.channel} : @{username} Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
+
+def clip_help(username: str):
+    logging.debug(f"triggered cliphelp for {username}")
+    sock.send(f"PRIVMSG #{config.channel} : @{username} !timestamp <optional clip title>, !rec <optional clip title> to save a clip timestamp with a title if your a moderator or broadcaster, !clip to create a 30 second clip trough the twitch api, !getclip to get the link to this bots github page, !stick to see how big your stick is \n".encode('utf-8'))
+
+def stick(username: str):
+    logging.debug(f"triggered clip for {username}")
+    sock.send(f"PRIVMSG #{config.channel} : @{username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
+
+def live_check(broadcaster_id: str, username: str) -> tuple[bool, dict]:
+    is_live = False
     api_call_succes = False
     error_count = 0
 
@@ -156,67 +219,8 @@ def clip(broadcaster_id: int, message_headers: str, username: str, message: str)
     except:
         sock.send(f"PRIVMSG #{config.channel} : @{username} {config.channel} is not live \n".encode('utf-8'))
         logging.debug(f"{config.channel} is not live")
-    
-    if is_live:
-        if check_mod_or_broadcaster(message_headers):
-            if config.use_timestamps:
-                started_time = get_stream_json["data"][0]["started_at"]
-                started_time = datetime.datetime.fromisoformat(started_time)
-                started_timestamp = int(started_time.timestamp())
-                started_date = f"{started_time.year}-{started_time.month:02d}-{started_time.day:02d}-{started_time.hour:02d}"
 
-                current_time = datetime.datetime.now()
-                current_timestamp = int(current_time.timestamp())
-                elapsed_timestamp = current_timestamp - started_timestamp
-                elapsed_time_formatted = timestamp_to_time_str(elapsed_timestamp)
-
-                clips_file = os.path.join("clip_timestamps",f"clips-{started_date}.txt")
-
-                if clip_title_match := re.findall("!clip (.*)$", message, re.MULTILINE | re.IGNORECASE): 
-                    clip_title = str(clip_title_match[0])
-
-                os.makedirs("clip_timestamps", exist_ok=True)
-
-                if not exists(clips_file):
-                    with open(clips_file, 'w') as File:
-                        File.write("")
-
-                with open(clips_file, 'a') as File:
-                    File.write(f"{elapsed_timestamp},{username},{clip_title}\n")
-
-                sock.send(f"PRIVMSG #{config.channel} :MrDestructoid saved timestamp for clip {elapsed_time_formatted} MrDestructoid\n".encode('utf-8'))
-                logging.debug(f"saved timestamp for clip {elapsed_time_formatted} with title {clip_title} for user {username} in file {clips_file}")
-            
-            if config.mods_make_normal_clips:
-                viewer_clip(broadcaster_id, username, config.use_timestamps)
-        
-        elif config.allow_viewer_clips:
-            viewer_clip(broadcaster_id, username, False)
-        else:
-            sock.send(f"PRIVMSG #{config.channel} : Sorry @{username}, you dont have enough rights to create a clip \n".encode('utf-8'))
-
-def viewer_clip(broadcaster_id: str, username: str, hide_message: bool):
-    try:
-        clip_response = requests.post(url=f"https://api.twitch.tv/helix/clips?broadcaster_id={broadcaster_id}",headers={'Authorization':f"Bearer {config.oath_token}", 'Client-Id':config.twitch_api_id})
-        if not hide_message:
-            sock.send(f"PRIVMSG #{config.channel} : @{username} fingers crossed! hopefully they let us keep this one \n".encode('utf-8'))
-        logging.debug(f"attempted to make a clip trough the twitch api with response {str(clip_response.status_code)}")
-    except Exception as e:
-        logging.debug(f"an exception occured whilst attempting to create a clip trough the twitch api: {e}")
-        sock.send(f"PRIVMSG #{config.channel} : unable to create a clip trough the api, check the logs for more details \n".encode('utf-8'))
-
-def get_clip(username: str):
-    logging.debug(f"triggered getclip for {username}")
-    sock.send(f"PRIVMSG #{config.channel} : @{username} Open source, locally hosted, what more do you want? https://github.com/keyboardmedicNL/twitch_dj_clipper \n".encode('utf-8'))
-
-def clip_help(username: str):
-    logging.debug(f"triggered cliphelp for {username}")
-    sock.send(f"PRIVMSG #{config.channel} : @{username} !clip <clip title> to save a clip timestamp with a title, !getclip to get the link to this bots github page, !stick to see how big your stick is \n".encode('utf-8'))
-
-def stick(username: str):
-    logging.debug(f"triggered clip for {username}")
-    sock.send(f"PRIVMSG #{config.channel} : @{username} has a {random.randint(3,400)} cm stick! \n".encode('utf-8'))
-    
+    return(is_live, get_stream_json)
 
 # main 
 def main():
@@ -271,7 +275,13 @@ def main():
                         username = get_username(resp)
 
                         if (re.findall(r'!clip\s|!clip$', message)):
-                            clip(broadcaster_id, message_headers, username, message)
+                            clip(broadcaster_id, username, message_headers, False)
+
+                        if (re.findall(r'!timestamp\s|!timestamp$|!rec\s|!rec$', message)):
+                            if check_mod_or_broadcaster(message_headers):
+                                timestamp(broadcaster_id, message_headers, username, message)
+                            else:
+                                clip(broadcaster_id, username, message_headers, False)
 
                         if "!getclip" in message:
                             get_clip(username)

@@ -14,8 +14,7 @@ default_config = {
     "quiet": False,
     "extra_params": "",
     "allow_viewer_clips": True,
-    "mods_make_normal_clips": True,
-    "use_timestamps": True
+    "mods_make_normal_clips": True
 }
 
 # loads config from file
